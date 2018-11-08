@@ -1,0 +1,74 @@
+- hosts: localhost
+  become: true
+  remote_user: root
+  tasks:
+  - name: installing git
+    apt:
+     name: git
+     state: present
+    become: true
+
+  - name: installing pip
+    easy_install:
+     name: pip
+     state: present
+    become: true
+
+  - name: Create a login user
+    user:
+     name: appuser
+     password: '$6$F4NWXRFtSdCi8$DsB5vvMJYusQhSbvGXrYDXL6Xj37MUuqFCd4dGXdKd6NyxT3lpdELN07/Kpo7EjjWnm9zusFg/LLFv6oc.ynu/'
+     #groups: appuser  # Empty by default.
+     state: present
+     shell: /bin/bash       # Defaults to /bin/bash
+     system: no             # Defaults to no
+     createhome: yes        # Defaults to yes
+     home: /home/appuser  # Defaults to /home/<username>
+
+  - name: creating source directory"
+    file:
+     path: "/webapps/devops"
+     state: directory
+     owner: "appuser"
+     group: "appuser"
+     recurse: yes
+    become: true
+
+  - file:
+     path: "/webapps/devops"
+     mode: 0777
+     state: directory
+    become: true
+
+  - name: cloning repo
+    git:
+     repo: "https://bitbucket.org/azneita/devops-challenge.git"
+     clone: yes
+     version: "master"
+     dest: "/webapps/devops"
+     force: yes
+
+  - name: set app code user and group permissions
+    file:
+     path: "/webapps"
+     state: directory
+     recurse: yes
+     owner: "appuser"
+     group: "appuser"
+    become: true
+
+  - name: chmoding app code dir
+    file:
+     path: "/webapps/devops"
+     state: directory
+     mode: "0755"
+    become: true
+
+  - pip:
+     requirements: /webapps/devops/requirements.txt
+
+  - name: Run a command
+    shell: nohup python /webapps/devops/app.py & 
+    args:
+     executable: /bin/bash
+    become_user: appuser
